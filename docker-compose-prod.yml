@@ -1,0 +1,110 @@
+services:
+
+  traefik:
+    image: traefik:latest
+    restart: unless-stopped
+    command:
+      - '--api.dashboard=true'
+      - '--api.insecure=true'
+      - '--providers.docker=true'
+      - '--entryPoints.web.address=:80'
+      - '--entryPoints.websecure.address=:443'
+      - '--certificatesResolvers.myresolver.acme.httpChallenge.entryPoint=web'
+      - '--certificatesResolvers.myresolver.acme.email=roland.vrignon@btp-consultants.fr'
+      - '--certificatesResolvers.myresolver.acme.storage=/letsencrypt/acme.json'
+      - '--entryPoints.web.transport.respondingTimeouts.readTimeout=1200s'
+      - '--entryPoints.web.transport.respondingTimeouts.idleTimeout=1200s'
+      - '--entryPoints.websecure.transport.respondingTimeouts.readTimeout=1200s'
+      - '--entryPoints.websecure.transport.respondingTimeouts.idleTimeout=1200s'
+    volumes:
+      - ./letsencrypt:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - core
+
+  core:
+    image: 929387410269.dkr.ecr.eu-north-1.amazonaws.com/ynor/core
+    restart: unless-stopped
+    volumes:
+      - document-processing:/tmp/document-processing
+    env_file:
+      - .env
+    labels:
+      - "traefik.enable=true"
+
+      # Route HTTPS
+      - "traefik.http.routers.core.rule=Host(`api.ynor.tech`)"
+      - "traefik.http.routers.core.entrypoints=websecure"
+      - "traefik.http.routers.core.tls.certresolver=myresolver"
+      - "traefik.http.routers.core.middlewares=core-websocket"
+
+      # Route HTTP → HTTPS (redirection)
+      - "traefik.http.routers.core-http.rule=Host(`api.ynor.tech`)"
+      - "traefik.http.routers.core-http.entrypoints=web"
+      - "traefik.http.routers.core-http.middlewares=core-https-redirect"
+
+      # Middlewares
+      - "traefik.http.services.core.loadbalancer.server.port=8080"
+      - "traefik.http.middlewares.core-websocket.compress=true"
+      - "traefik.http.middlewares.core-websocket.compress.excludedContentTypes=text/event-stream"
+      - "traefik.http.middlewares.core-https-redirect.redirectscheme.scheme=https"
+
+    networks:
+      - core
+    logging:
+      driver: "awslogs"
+      options:
+        awslogs-region: "eu-north-1"
+        awslogs-group: "core-logs"
+        awslogs-stream: "core"
+        awslogs-create-group: "true"
+
+     pg-to-bq-core-sync:
+    image: 929387410269.dkr.ecr.eu-north-1.amazonaws.com/ynor/pqtobqexport:latest
+    container_name: pg-to-bq-core-sync
+    restart: "no"
+    user: "0:0"
+    volumes:
+      - ./pg-to-bq-core/ynor-463412-35a720fe2748.json:/usr/src/app/ynor-463412-35a720fe2748.json:ro
+      - ./pg-to-bq-core/sync_state.json:/usr/src/app/sync_state.json:rw
+    env_file:
+      - ./pg-to-bq-core/.env.docker
+    networks:
+      - core
+    logging:
+      driver: "awslogs"
+      options:
+        awslogs-region: "eu-north-1"
+        awslogs-group: "pg-to-bq-core-logs"
+        awslogs-stream: "pg-to-bq-core-sync"
+        awslogs-create-group: "true"
+
+  pg-to-bq-client-sync:
+    image: 929387410269.dkr.ecr.eu-north-1.amazonaws.com/ynor/pqtobqexport:latest
+    container_name: pg-to-bq-client-sync
+    restart: "no"
+    user: "0:0"
+    volumes:
+      - ./pg-to-bq-client/ynor-463412-35a720fe2748.json:/usr/src/app/ynor-463412-35a720fe2748.json:ro
+      - ./pg-to-bq-client/sync_state.json:/usr/src/app/sync_state.json:rw
+    env_file:
+      - ./pg-to-bq-client/.env.docker
+    networks:
+      - core
+    logging:
+      driver: "awslogs"
+      options:
+        awslogs-region: "eu-north-1"
+        awslogs-group: "pg-to-bq-client-logs"
+        awslogs-stream: "pg-to-bq-client-sync"
+        awslogs-create-group: "true"
+
+networks:
+  core:
+    driver: bridge
+
+volumes:
+  document-processing:

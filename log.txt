@@ -1,0 +1,23 @@
+Connected to PostgreSQL
+syncState: {}
+table: project
+lastSyncTime: null
+capturing current timestamp for next sync
+captured currentTimestamp: 2025-06-20T09:34:58.001Z
+fetchAllRows: false
+fetching all rows
+Fetched 300 rows from table project (initial sync)
+Inserted batch 1 (100 rows) into BigQuery table project
+Inserted batch 2 (100 rows) into BigQuery table project
+Inserted batch 3 (100 rows) into BigQuery table project
+updating sync state with captured timestamp
+table: user
+lastSyncTime: null
+capturing current timestamp for next sync
+captured currentTimestamp: 2025-06-20T09:34:59.758Z
+fetchAllRows: false
+fetching all rows
+Fetched 1 rows from table user (initial sync)
+Inserted batch 1 (1 rows) into BigQuery table user
+updating sync state with captured timestamp
+PostgreSQL connection closed

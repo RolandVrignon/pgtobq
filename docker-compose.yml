@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  pg-to-bq-sync:
+    image: ynor/pqtobqexport:latest
+    container_name: pg-to-bq-sync
+    restart: "no"
+    volumes:
+      - ./.env.docker:/usr/src/app/.env:ro
+      - ./ynor-463412-35a720fe2748.json:/usr/src/app/ynor-463412-35a720fe2748.json:ro
+      - ./sync_state.json:/usr/src/app/sync_state.json:rw
+    env_file:
+      - .env.docker
