@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  pg-to-bq-sync:
+    image: pg_to_bq_ts:latest
+    container_name: pg-to-bq-sync-example
+    restart: "no"
+    volumes:
+      - ./example.env:/usr/src/app/.env:ro
+      - ./example-bq-service-account.json:/usr/src/app/bq-service-account.json:ro
+      - ./sync_state.json:/usr/src/app/sync_state.json:rw
+    env_file:
+      - ./example.env
+    # Si besoin, décommentez pour voir les logs en direct
+    # tty: true

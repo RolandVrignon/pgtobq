@@ -1,5 +1,0 @@
-# Crontab for pg-to-bq-sync service
-# Runs every 5 minutes, script handles business hours filtering
-
-# Run pg-to-bq sync every 5 minutes
-*/5 * * * * /home/ubuntu/run-pg-to-bq-sync.sh >> /home/ubuntu/logs/pg-to-bq-sync.log 2>&1
