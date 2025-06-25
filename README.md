@@ -1,51 +1,51 @@
 # pg_to_bq_ts
 
-Ce projet permet de copier des tables d'une base PostgreSQL vers BigQuery en utilisant TypeScript et Docker.
+This project allows you to copy tables from a PostgreSQL database to BigQuery using TypeScript and Docker.
 
-## Prérequis
+## Prerequisites
 - Node.js
 - Docker
-- Un compte Google Cloud avec un service account BigQuery
+- A Google Cloud account with a BigQuery service account
 
 ---
 
-## 1. Comment obtenir les informations pour la configuration
+## 1. How to get the required configuration information
 
-### Informations PostgreSQL
-- **PG_HOST** : Adresse du serveur PostgreSQL (ex : `localhost` ou IP/hostname du serveur distant).
-- **PG_PORT** : Port d'écoute de PostgreSQL (par défaut : `5432`).
-- **PG_USER** et **PG_PASSWORD** : Identifiants d'un utilisateur ayant accès en lecture aux tables à migrer (demander à l'administrateur ou créer un utilisateur dédié).
-- **PG_DATABASE** : Nom de la base de données source.
+### PostgreSQL Information
+- **PG_HOST**: Address of the PostgreSQL server (e.g., `localhost` or the IP/hostname of a remote server).
+- **PG_PORT**: PostgreSQL listening port (default: `5432`).
+- **PG_USER** and **PG_PASSWORD**: Credentials for a user with read access to the tables to migrate (ask your database administrator or create a dedicated user).
+- **PG_DATABASE**: Name of the source database.
 
-### Informations BigQuery
-- **GOOGLE_APPLICATION_CREDENTIALS** : Chemin absolu vers le fichier JSON du service account Google Cloud ayant les droits d'écriture sur BigQuery.
-  - Pour l'obtenir :
-    1. Aller sur la [console Google Cloud IAM & Admin > Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts).
-    2. Créer un service account ou en sélectionner un existant.
-    3. Lui attribuer le rôle `BigQuery Data Editor` (ou équivalent).
-    4. Générer une clé JSON et la télécharger.
-    5. Placer ce fichier sur la machine et renseigner son chemin absolu dans la variable.
-- **BQ_PROJECT_ID** : Identifiant du projet Google Cloud (visible dans la console GCP, en haut à gauche).
-- **BQ_DATASET** : Nom du dataset BigQuery cible (doit exister ou être créé dans la console BigQuery).
+### BigQuery Information
+- **GOOGLE_APPLICATION_CREDENTIALS**: Absolute path to the Google Cloud service account JSON file with write permissions on BigQuery.
+  - To obtain it:
+    1. Go to the [Google Cloud IAM & Admin > Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts) page.
+    2. Create a new service account or select an existing one.
+    3. Grant it the `BigQuery Data Editor` role (or equivalent).
+    4. Generate a JSON key and download it.
+    5. Place this file on your machine and set its absolute path in the variable.
+- **BQ_PROJECT_ID**: Your Google Cloud project ID (visible in the GCP console, top left).
+- **BQ_DATASET**: Name of the target BigQuery dataset (must exist or be created in the BigQuery console).
 
-### Tables à migrer
-- **TABLES** : Liste des tables à synchroniser, séparées par des virgules (ex : `users,orders,products`). Les tables doivent exister dans la base PostgreSQL source.
+### Tables to Migrate
+- **TABLES**: Comma-separated list of tables to synchronize (e.g., `users,orders,products`). The tables must exist in the source PostgreSQL database.
 
-### Autres options
-- **FETCH_ALL_ROWS** :
-  - Si `true` : toutes les lignes de chaque table seront synchronisées à chaque exécution (ignorer l'historique).
-  - Si `false` (valeur recommandée) : seules les nouvelles lignes depuis la dernière synchronisation (stockée dans `sync_state.json`) seront transférées, si la table possède une colonne `created_at`.
-  - Par défaut : `false`.
-
----
-
-## 2. Création de la table BigQuery
-- **Création automatique** : Si la table n'existe pas dans BigQuery, le script la créera automatiquement avec un schéma basé sur la première ligne de données.
-- **Création manuelle (optionnel)** : Vous pouvez créer le dataset et les tables à l'avance via la console BigQuery si vous souhaitez un contrôle précis sur le schéma.
+### Other Options
+- **FETCH_ALL_ROWS**:
+  - If `true`: all rows from each table will be synchronized on every run (ignores sync history).
+  - If `false` (recommended): only new rows since the last sync (tracked in `sync_state.json`) will be transferred, if the table has a `created_at` column.
+  - Default: `false`.
 
 ---
 
-## 3. Exemple de fichier `.env`
+## 2. BigQuery Table Creation
+- **Automatic creation**: If the table does not exist in BigQuery, the script will create it automatically with a schema based on the first data row.
+- **Manual creation (optional)**: You can create the dataset and tables in advance via the BigQuery console if you want precise control over the schema.
+
+---
+
+## 3. Example `.env` file
 
 ```env
 # PostgreSQL configuration
@@ -63,43 +63,46 @@ BQ_DATASET=your_bq_dataset
 # Tables to migrate (comma separated)
 TABLES=table1,table2
 
-# Synchronisation mode
+# Synchronization mode
 FETCH_ALL_ROWS=false
 ```
 
 ---
 
-## 4. Résumé des étapes
-1. Créer un service account Google Cloud avec les droits BigQuery, télécharger la clé JSON.
-2. Créer (ou identifier) le dataset BigQuery cible.
-3. Récupérer les accès PostgreSQL.
-4. Remplir le fichier `.env` avec les informations ci-dessus.
-5. Lancer le script en local ou via Docker.
+## 4. Steps Summary
+1. Create a Google Cloud service account with BigQuery permissions and download the JSON key.
+2. Create (or identify) the target BigQuery dataset.
+3. Obtain PostgreSQL access credentials.
+4. Fill in the `.env` file with the above information.
+5. Run the script locally or with Docker.
 
 ---
 
-## 5. À quoi sert le fichier `sync_state.json` ?
+## 5. What is `sync_state.json` for?
 
-Ce fichier est utilisé pour mémoriser la date de la dernière synchronisation pour chaque table migrée.
+This file is used to store the last synchronization date for each migrated table.
 
-- Lors de chaque exécution, le script enregistre pour chaque table la date de la dernière ligne synchronisée.
-- Cela permet de ne synchroniser que les nouvelles données lors des prochaines exécutions (si la table possède une colonne `created_at`).
-- Si le fichier est supprimé ou vide, une synchronisation complète sera effectuée.
+- On each run, the script records the last synced date for each table.
+- This allows only new data to be synchronized on subsequent runs (if the table has a `created_at` column).
+- If the file is deleted or empty, a full sync will be performed.
 
-**Remarque :** Ce fichier est automatiquement géré par le script, il n'est pas nécessaire de le modifier manuellement.
+**Note:** This file is managed automatically by the script; you do not need to edit it manually.
 
 ---
 
-## Utilisation
+## Usage
 
-### En local
+### Locally
 ```bash
 npm install
 npx ts-node src/index.ts
 ```
 
-### Avec Docker
+### With Docker
 ```bash
 docker build -t pg_to_bq_ts .
-docker run --env-file .env -v /chemin/vers/credentials.json:/path/to/your/bq-service-account.json pg_to_bq_ts
+docker run --env-file .env -v /path/to/credentials.json:/path/to/your/bq-service-account.json pg_to_bq_ts
 ```
+
+### With Docker Compose
+You can use the provided `docker-compose-example.yml` as a template for your deployment.
